@@ -69,42 +69,52 @@ cache::~cache()
 
 void cache::update(int &inSite)
 {
-    site temp(inSite, NULL, NULL);
-    hashMap[temp.siteName] = temp;
-    
-    //no hashMap members yet
-    if(newest == NULL)
-    {
-        oldest = &hashMap[temp.siteName];
-        newest = &hashMap[temp.siteName];
-        currentSize++;
-    }
-    //only one hashMap member
-    else if (newest == oldest)
-    {
-        newest->newer = &hashMap[temp.siteName];
-        hashMap[temp.siteName].older = newest;
-        oldest = newest;
-        newest = &hashMap[temp.siteName];
-        currentSize++;
+   if(hashMap.find(inSite) == hashMap.end())
+   {
+        site temp(inSite, NULL, NULL);
+        hashMap[temp.siteName] = temp;
         
+        //no hashMap members yet
+        if(newest == NULL)
+        {
+            oldest = &hashMap[temp.siteName];
+            newest = &hashMap[temp.siteName];
+            currentSize++;
+        }
+        //only one hashMap member
+        else if (newest == oldest)
+        {
+            newest->newer = &hashMap[temp.siteName];
+            hashMap[temp.siteName].older = newest;
+            oldest = newest;
+            newest = &hashMap[temp.siteName];
+            currentSize++;
+            
+        }
+        //all else
+        else
+        {
+            newest->newer = &hashMap[temp.siteName];
+            newest->newer->older = newest;
+            newest = &hashMap[temp.siteName];
+            currentSize++;
+            
+            if (currentSize > cacheSize)
+            {
+            site* deleteMe = oldest;
+            oldest = oldest->newer;
+            oldest->older = NULL;
+            deleteMe->siteName = -1;
+            }
+            
+        }
     }
-    //all else
     else
     {
-        newest->newer = &hashMap[temp.siteName];
-        newest->newer->older = newest;
-        newest = &hashMap[temp.siteName];
-        currentSize++;
-        
-        if (currentSize > cacheSize)
-        {
-        site* deleteMe = oldest;
-        oldest = oldest->newer;
-        oldest->older = NULL;
-        deleteMe->siteName = -1;
-        }
-        
+        newest->newer = &hashMap[inSite];
+        hashMap[inSite].older = newest;
+        newest = &hashMap[inSite];
+        newest->newer = NULL;
     }
 }
 
@@ -125,6 +135,8 @@ int main()
     myCache.fillHash();
     
     int browse = rand();
+    myCache.update(browse);
+    browse = rand();
     myCache.update(browse);
     
     site* temp = myCache.newest;
