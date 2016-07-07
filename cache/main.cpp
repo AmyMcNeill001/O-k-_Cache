@@ -1,42 +1,38 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
-#include <unordered_map> 
+#include <unordered_map>
 using namespace std;
 
 struct site
 {
     int siteName;
-    int hash;
     site* newer;
     site* older;
     
     site();
-    site(int &inName, int &inCacheSize, site* inNewer, site* inOlder);
+    site(int &inName, site* inNewer, site* inOlder);
     site& operator=(site& rhsObj);
 };
 
 site::site()
 {
-    hash = -1;
     siteName = -1;
     newer = NULL;
     older = NULL;
 }
 
-site::site(int &inName, int &inCacheSize, site* inNewer, site* inOlder)
+site::site(int &inName, site* inNewer, site* inOlder)
 {
     siteName = inName;
     newer = inNewer;
     older = inOlder;
     
-    hash = inName % inCacheSize;
 }
 
 site& site::operator=(site &rhsObj)
 {
     this->siteName = rhsObj.siteName;
-    this->hash = rhsObj.hash;
     this->newer = rhsObj.newer;
     this->older = rhsObj.older;
     
@@ -46,10 +42,11 @@ site& site::operator=(site &rhsObj)
 class cache
 {
 public:
-    site* hashtable;
+    unordered_map<int, site> hashMap;
     site* oldest;
     site* newest;
     int cacheSize;
+    int currentSize;
     
     cache(int &inCacheSize);
     ~cache();
@@ -62,45 +59,51 @@ public:
 cache::cache(int &inCacheSize)
 {
     cacheSize = inCacheSize;
-    hashtable = new site[cacheSize];
     oldest = newest = NULL;
 }
 
 cache::~cache()
 {
-    delete hashtable;
+    ////delete hashMap;
 }
 
 void cache::update(int &inSite)
 {
-    site temp(inSite, cacheSize, NULL, NULL);
-    hashtable[temp.hash] = temp;
+    site temp(inSite, NULL, NULL);
+    hashMap[temp.siteName] = temp;
     
-    //no hashtable members yet
+    //no hashMap members yet
     if(newest == NULL)
     {
-        oldest = &hashtable[temp.hash];
-        newest = &hashtable[temp.hash];
+        oldest = &hashMap[temp.siteName];
+        newest = &hashMap[temp.siteName];
+        currentSize++;
     }
-    //only one hashtable member
+    //only one hashMap member
     else if (newest == oldest)
     {
-        newest->newer = &hashtable[temp.hash];
-        hashtable[temp.hash].older = newest;
+        newest->newer = &hashMap[temp.siteName];
+        hashMap[temp.siteName].older = newest;
         oldest = newest;
-        newest = &hashtable[temp.hash];
+        newest = &hashMap[temp.siteName];
+        currentSize++;
         
     }
     //all else
     else
     {
-        newest->newer = &hashtable[temp.hash];
+        newest->newer = &hashMap[temp.siteName];
         newest->newer->older = newest;
-        newest = &hashtable[temp.hash];
+        newest = &hashMap[temp.siteName];
+        currentSize++;
+        
+        if (currentSize > cacheSize)
+        {
         site* deleteMe = oldest;
         oldest = oldest->newer;
         oldest->older = NULL;
-        deleteMe->hash = -1;
+        deleteMe->siteName = -1;
+        }
         
     }
 }
@@ -124,8 +127,11 @@ int main()
     int browse = rand();
     myCache.update(browse);
     
-    for (int ii = 0; ii < size; ii++)
+    site* temp = myCache.newest;
+    while(temp != myCache.oldest)
     {
-        cout << myCache.hashtable[ii].siteName << endl;
+        cout << temp->siteName << endl;
+        temp = temp->older;
     }
+    cout << myCache.oldest->siteName << endl;
 }
